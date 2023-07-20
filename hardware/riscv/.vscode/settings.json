@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "platform.h": "c",
+        "spi.h": "c",
+        "const.h": "c"
+    }
+}
