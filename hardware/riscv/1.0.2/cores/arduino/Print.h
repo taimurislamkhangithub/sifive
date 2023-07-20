@@ -32,8 +32,6 @@ __END_DECLS
 #define HEX 16
 #define OCT 8
 #define BIN 2
-#define one 2
-#define two 2
 
 class Print
 {
