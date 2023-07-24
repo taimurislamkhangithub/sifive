@@ -11,6 +11,8 @@
 
 #include "SPI.h"
 #define TWO 2
+#define THREE 3
+
 SPIClass::SPIClass(uint32_t _id) :
   id(_id)
 {
