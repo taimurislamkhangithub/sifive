@@ -9,6 +9,7 @@
  * published by the Free Software Foundation.
  */
 
+#define 1
 #include "SPI.h"
 
 SPIClass::SPIClass(uint32_t _id) :
