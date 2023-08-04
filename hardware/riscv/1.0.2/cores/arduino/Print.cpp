@@ -34,7 +34,6 @@ size_t Print::write(const uint8_t *buffer, size_t size)
 {
   size_t n = 0;
   while (size--) {
-    //(*(volatile unsigned int*)0x80002000) = 'C';
     n += write(*buffer++);
   }
   return n;
@@ -50,7 +49,17 @@ size_t Print::write(const uint8_t data)
   return 1;
 }
 
-size_t Print::write(char data)
+size_t Print::write(const uint8_t *data)
+{
+  /* Check for space in UART FIFO */
+    while((UART_REG(UART_REG_LSR) & UART_LSR_THRE_BIT) == 0);
+
+  // write char
+  UART_REG(UART_WR_CH) = *data;
+  return 1;
+}
+
+size_t Print::write(const char data)
 {
   /* Check for space in UART FIFO */
     while((UART_REG(UART_REG_LSR) & UART_LSR_THRE_BIT) == 0);
@@ -59,6 +68,7 @@ size_t Print::write(char data)
   UART_REG(UART_WR_CH) = data;
   return 1;
 }
+
 
 size_t Print::print(const __FlashStringHelper *ifsh)
 {
