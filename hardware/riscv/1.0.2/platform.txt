@@ -14,7 +14,7 @@ compiler.objcopy.cmd=riscv64-unknown-elf-objcopy
 compiler.elf2hex.cmd=riscv64-unknown-elf-objcopy
 compiler.size.cmd=riscv64-unknown-elf-size
 
-compiler.sdk.path={runtime.platform.path}/freedom-e-sdk/bsp
+compiler.sdk.path={runtime.platform.path}/strive-sdk/bsp
 compiler.preproc.flags=-I{build.system.path}/include -I{compiler.sdk.path}/include -I{compiler.sdk.path}/env -I{compiler.sdk.path}/drivers -I{compiler.sdk.path}/env/{build.boardenv}
 compiler.c.flags=-c -Os -Wall -ffunction-sections -fdata-sections -march={build.mcu} -mabi=ilp32 -march=rv32im {compiler.preproc.flags} -fno-builtin-printf -include sys/cdefs.h -g
 compiler.cpp.flags=-c -Os -Wall -ffunction-sections -fdata-sections -march={build.mcu} -mabi=ilp32 -march=rv32im {compiler.preproc.flags} -fno-builtin-printf -include sys/cdefs.h -g
@@ -70,11 +70,11 @@ recipe.size.regex=\s*[0-9]+\s+[0-9]+\s+[0-9]+\s+([0-9]+).*
 
 # Uploader tools
 # -------------------
-tools.openocd.path={runtime.platform.path}/freedom-e-sdk/bsp
+tools.openocd.path={runtime.platform.path}/strive-sdk/bsp
 tools.openocd.program.config={path}/env/strive-1/strive-1-fpga.cfg
 tools.openocd.program.configBIT={path}/env/strive-1/strive-1-fpga-bit.cfg
 tools.openocd.program.bitfilePath={path}/env/strive-1/strive-1.bit
-tools.openocd.cmd=/openocd_lsketch
+tools.openocd.cmd=/env/strive-1/openocd_lsketch
 tools.openocd.program.params.verbose=-v
 tools.openocd.program.params.quiet=-q
 tools.openocd.program.pattern="{path}{cmd}" "{build.path}/{build.project_name}.elf" {program.config} {program.configBIT} {program.bitfilePath}
