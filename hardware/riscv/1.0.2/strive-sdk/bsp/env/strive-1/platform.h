@@ -1,20 +1,20 @@
 // See LICENSE for license details.
 
-#ifndef _SIFIVE_PLATFORM_H
-#define _SIFIVE_PLATFORM_H
+#ifndef _strive_PLATFORM_H
+#define _strive_PLATFORM_H
 
 // Some things missing from the official encoding.h
 #define MCAUSE_INT         0x80000000
 #define MCAUSE_CAUSE       0x7FFFFFFF
 
-#include "sifive/const.h"
-#include "sifive/devices/aon.h"
-#include "sifive/devices/clint.h"
-#include "sifive/devices/gpio.h"
-#include "sifive/devices/plic.h"
-#include "sifive/devices/pwm.h"
-#include "sifive/devices/spi.h"
-#include "sifive/devices/uart.h"
+#include "strive/const.h"
+#include "strive/devices/aon.h"
+#include "strive/devices/clint.h"
+#include "strive/devices/gpio.h"
+#include "strive/devices/plic.h"
+#include "strive/devices/pwm.h"
+#include "strive/devices/spi.h"
+#include "strive/devices/uart.h"
 
 /****************************************************************************
  * Platform definitions
@@ -122,4 +122,4 @@
 unsigned long get_timer_freq(void);
 uint64_t get_timer_value(void);
 
-#endif /* _SIFIVE_PLATFORM_H */
+#endif /* _strive_PLATFORM_H */
