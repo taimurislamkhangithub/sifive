@@ -34,6 +34,7 @@ class UARTClass : public HardwareSerial
     int peek(void);
     int read(void);
     void flush(void);
+    void sio_receive(char c);
     size_t write(uint8_t c);
     using Print::write; // pull in write(str) and write(buf, size) from Print
 
@@ -42,6 +43,8 @@ class UARTClass : public HardwareSerial
     // f32c extension (default is XON/XOFF enabled - so input is not transparent)
 //    void setXoffXon(bool enable) { if (enable) tx_xoff &= ~0x80; else tx_xoff = 0x80; }
 
+  private:
+    static const int RX_BUF_SIZE = 8; // Size of the receive buffer
   protected:
     int sio_probe_rx();
     int sio_getchar(int blocking);

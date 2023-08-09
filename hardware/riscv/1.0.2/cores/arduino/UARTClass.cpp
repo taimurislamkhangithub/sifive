@@ -28,36 +28,22 @@ UARTClass Serial;
 
 int UARTClass::sio_probe_rx()
 {
-  int32_t c;
-
-  if ((c = UART_REG(UART_REG_RXFIFO)) >= 0)
-  {
-    sio_rxbuf[sio_rxbuf_head++] = c;
-    sio_rxbuf_head &= SIO_RXBUFMASK;
+    /* Check for characters in UART Receive FIFO */
+    if ((UART_LSR_DR & (UART_REG(UART_REG_LSR))) == 0)
+    {
+        return (0);
+    }
     return (1);
-  }
-  // if ()
-  // {
 
-  // }
-  return (0);
 }
 
 int UARTClass::sio_getchar(int blocking)
 {
   int c, busy;
 
-  do
-  {
-    sio_probe_rx();
-    busy = (sio_rxbuf_head == sio_rxbuf_tail);
-  } while (blocking && busy);
-
-  if (busy)
-    return (-1);
-  c = sio_rxbuf[sio_rxbuf_tail++];
-  sio_rxbuf_tail &= SIO_RXBUFMASK;
-  return (c);
+  while (blocking && !sio_probe_rx());
+  c = UART_REG(UART_WR_CH);
+  return c;
 }
 
 int UARTClass::sio_putchar(char c, int blocking)
@@ -73,14 +59,10 @@ int UARTClass::sio_putchar(char c, int blocking)
 }
 
 /*
- * Set RS-232 baudrate.  Works well with FT-232R from 300 to 3000000 bauds.
+ * Set RS-232 baudrate.  Works well with FT-232R from 9600 to 1000000 bauds.
  */
 void UARTClass::sio_setbaud(int bauds)
 {
-
-  // F_Baud = f_in/(div+1)
-
-  // UART_REG(UART_REG_DIV) = F_CPU / bauds - 1;
   UART_REG(UART_REG_BRDL) = (F_CPU / bauds) / 16;
 }
 
@@ -88,15 +70,6 @@ void UARTClass::sio_setbaud(int bauds)
 
 void UARTClass::begin(unsigned long bauds)
 {
-  // GPIO_REG(GPIO_OUTPUT_XOR)&= ~(IOF0_UART0_MASK);
-  // GPIO_REG(GPIO_IOF_SEL)   &= ~(IOF0_UART0_MASK);
-  // GPIO_REG(GPIO_IOF_EN)    |= IOF0_UART0_MASK;
-
-  // //F_Baud = f_in/(div+1)
-
-  // UART_REG(UART_REG_DIV) = F_CPU / bauds - 1;
-  // UART_REG(UART_REG_TXCTRL) |= UART_TXEN;
-  // UART_REG(UART_REG_RXCTRL) |= UART_RXEN;
 
   /* SET LSR to be 1's so Whisper will be happy that ch is ready */
   UART_REG(UART_REG_LSR) = 0xff;
@@ -110,28 +83,44 @@ void UARTClass::begin(unsigned long bauds)
   /* disable interrupts  */
   UART_REG(UART_REG_IER) = (0x00);
 
-  //  sio_setbaud(bauds);
 }
 
 void UARTClass::end(void)
 {
-  GPIO_REG(GPIO_IOF_EN) &= ~IOF0_UART0_MASK;
-
-  UART_REG(UART_REG_TXCTRL) &= ~UART_TXEN;
-  UART_REG(UART_REG_RXCTRL) &= ~UART_RXEN;
 }
+
+// int UARTClass::available(void)
+// {
+//   return sio_probe_rx();
+// }
 
 int UARTClass::available(void)
 {
+      if (sio_probe_rx())
+    {
+      int c = sio_getchar(1);
+      if (c != -1) {
+          sio_receive(c);
+      }
+    }
 
-  sio_probe_rx();
-  return (!(sio_rxbuf_head == sio_rxbuf_tail));
+    int availableInBuffer = (sio_rxbuf_head - sio_rxbuf_tail + RX_BUF_SIZE) % RX_BUF_SIZE;
+
+    // If there are characters in the buffer, return the count
+    if (availableInBuffer > 0) {
+        return availableInBuffer;
+    }
+    else
+    {
+      return 0;
+    }
+
 }
 
 int UARTClass::availableForWrite(void)
 {
   int busy;
-  busy = ((int32_t)UART_REG(UART_REG_TXFIFO) < 0);
+  busy = (!(UART_REG(UART_REG_LSR) & UART_LSR_THRE_BIT));
   return (!busy);
 }
 
@@ -144,20 +133,45 @@ int UARTClass::peek(void)
     return (sio_rxbuf[sio_rxbuf_tail]);
 }
 
+// int UARTClass::read(void)
+// {
+//   return (sio_getchar(1));
+// }
+
 int UARTClass::read(void)
 {
+    sio_probe_rx();
 
-  return (sio_getchar(1));
+    // Check if there's a character in the buffer
+    if (sio_rxbuf_tail != sio_rxbuf_head) {
+        int c = sio_rxbuf[sio_rxbuf_tail];
+        sio_rxbuf_tail = (sio_rxbuf_tail + 1) % RX_BUF_SIZE;
+        return c;
+    }
+    else{
+      return 0;
+    }
 }
 
 void UARTClass::flush(void)
 {
+  /* Check for space in UART FIFO */
+    while((UART_REG(UART_REG_LSR) & UART_LSR_THRE_BIT) == 0);
 }
 
 size_t
 UARTClass::write(uint8_t uc_data)
 {
-  (*(volatile unsigned int*)0x80002000) = 'C';
   sio_putchar(uc_data, 1);
   return (1);
+}
+
+// Add received characters to the buffer
+void UARTClass::sio_receive(char c)
+{
+    // Check if the buffer is not full
+    if ((sio_rxbuf_head + 1) % RX_BUF_SIZE != sio_rxbuf_tail) {
+        sio_rxbuf[sio_rxbuf_head] = c;
+        sio_rxbuf_head = (sio_rxbuf_head + 1) % RX_BUF_SIZE;
+    }
 }
