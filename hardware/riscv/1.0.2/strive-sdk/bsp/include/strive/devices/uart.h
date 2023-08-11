@@ -1,31 +1,12 @@
 // See LICENSE for license details.
 
-#ifndef _SIFIVE_UART_H
-#define _SIFIVE_UART_H
-
-// /* Register offsets */
-#define UART_REG_TXFIFO         0x00
-#define UART_REG_RXFIFO         0x04
-#define UART_REG_TXCTRL         0x08
-#define UART_REG_RXCTRL         0x0c
-#define UART_REG_IP             0x14
-#define UART_REG_DIV            0x18
-
-/* TXCTRL register */
-#define UART_TXEN               0x1
-#define UART_TXWM(x)            (((x) & 0xffff) << 16)
-
-/* RXCTRL register */
-#define UART_RXEN               0x1
-#define UART_RXWM(x)            (((x) & 0xffff) << 16)
-
-/* IP register */
-#define UART_IP_TXWM            0x1
-#define UART_IP_RXWM            0x2
+#ifndef _STRIVE_UART_H
+#define _STRIVE_UART_H
 
 /* Register offsets */
 #define UART_REG_BRDL           0x00 /* Baud rate divisor (LSB)        */  
 #define UART_REG_IER            0x04 /* Interrupt enable reg.          */
+#define UART_REG_IIR            0x08 /* Interrupt enable reg.          */
 #define UART_REG_FCR            0x08 /* FIFO control reg.              */
 #define UART_REG_LCR            0x0C /* Line control reg.              */
 #define UART_REG_LSR            0x14 /* Line control reg.              */
@@ -47,5 +28,7 @@
 #define UART_FCR_FIFO_8_BIT  (0x80)  /* 8 bytes in RCVR FIFO */
 #define UART_DLAB_BIT        (0x80)  /* DLAB bit in LCR */
 
+#define UART_LSR_DR          (0x01)  /* Data Ready Indicator*/
 
-#endif /* _SIFIVE_UART_H */
+
+#endif /* _STRIVE_UART_H */

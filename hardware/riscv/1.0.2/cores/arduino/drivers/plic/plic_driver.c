@@ -1,6 +1,6 @@
 // See LICENSE for license details.
 
-#include "sifive/devices/plic.h"
+#include "strive/devices/plic.h"
 #include "plic/plic_driver.h"
 #include "platform.h"
 #include "encoding.h"
