@@ -1,17 +1,10 @@
-name= SiFive Freedom E300 Boards
+name= Strive
 version=1.0.1
 
 # Compile variables
 # ----------------------
 
 compiler.path={runtime.tools.riscv32-unknown-elf-gcc.path}/bin/
-#compiler.c.cmd=riscv32-unknown-elf-gcc
-#compiler.cpp.cmd=riscv32-unknown-elf-g++
-#compiler.ld.cmd=riscv32-unknown-elf-ld
-#compiler.ar.cmd=riscv32-unknown-elf-ar
-#compiler.objcopy.cmd=riscv32-unknown-elf-objcopy
-#compiler.elf2hex.cmd=riscv32-unknown-elf-objcopy
-#compiler.size.cmd=riscv32-unknown-elf-size
 
 compiler.c.cmd=riscv64-unknown-elf-gcc
 compiler.cpp.cmd=riscv64-unknown-elf-g++
@@ -21,20 +14,12 @@ compiler.objcopy.cmd=riscv64-unknown-elf-objcopy
 compiler.elf2hex.cmd=riscv64-unknown-elf-objcopy
 compiler.size.cmd=riscv64-unknown-elf-size
 
-
-
-compiler.sdk.path={runtime.platform.path}/freedom-e-sdk/bsp
+compiler.sdk.path={runtime.platform.path}/strive-sdk/bsp
 compiler.preproc.flags=-I{build.system.path}/include -I{compiler.sdk.path}/include -I{compiler.sdk.path}/env -I{compiler.sdk.path}/drivers -I{compiler.sdk.path}/env/{build.boardenv}
-#compiler.c.flags=-c -O0 -march={build.mcu} -fpeel-loops -ffreestanding -ffunction-sections -fdata-sections -Wall {compiler.preproc.flags} -include sys/cdefs.h -g
-#compiler.cpp.flags=-c -O0 -march={build.mcu} -fpeel-loops -ffreestanding -ffunction-sections -fdata-sections -fpermissive -Wall -fno-rtti -fno-exceptions {compiler.preproc.flags} -include sys/cdefs.h -g
-#compiler.ld.flags=-T {build.ldscript} -nostartfiles -Wl,-N -Wl,--gc-sections -Wl,--wrap=malloc -Wl,--wrap=free -Wl,--wrap=sbrk
-#compiler.ld.flags=-T {build.ldscript} -Os -march={build.mcu} -mabi=ilp32 -mcmodel=medlow -Wl,-gc-sections -nostdlib -nostartfiles -static -Wl,--wrap=malloc -Wl,--wrap=free -Wl,--wrap=open -Wl,--wrap=lseek -Wl,--wrap=read -Wl,--wrap=write -Wl,--wrap=fstat -Wl,--wrap=stat -Wl,--wrap=close -Wl,--wrap=link  -Wl,--wrap=unlink -Wl,--wrap=execve" -Wl,--wrap=fork" -Wl,--wrap=getpid -Wl,--wrap=kill -Wl,--wrap=wait -Wl,--wrap=isatty -Wl,--wrap=times -Wl,--wrap=sbrk -Wl,--wrap=_exit -Wl,-Map=output.map -Wl,--defsym=__comrv_cache_size=0
-#compiler.S.flags=-c -march={build.mcu} {compiler.preproc.flags} -g
 compiler.c.flags=-c -Os -Wall -ffunction-sections -fdata-sections -march={build.mcu} -mabi=ilp32 -march=rv32im {compiler.preproc.flags} -fno-builtin-printf -include sys/cdefs.h -g
 compiler.cpp.flags=-c -Os -Wall -ffunction-sections -fdata-sections -march={build.mcu} -mabi=ilp32 -march=rv32im {compiler.preproc.flags} -fno-builtin-printf -include sys/cdefs.h -g
 compiler.ld.flags=-T {build.ldscript} -Os -march={build.mcu} -mabi=ilp32 -mcmodel=medlow -Wl,-gc-sections -nostdlib -nostartfiles -static -Wl,--wrap=malloc -Wl,--wrap=free -Wl,--wrap=open -Wl,--wrap=lseek -Wl,--wrap=read -Wl,--wrap=write -Wl,--wrap=fstat -Wl,--wrap=stat -Wl,--wrap=close -Wl,--wrap=link  -Wl,--wrap=unlink -Wl,--wrap=execve" -Wl,--wrap=fork" -Wl,--wrap=getpid -Wl,--wrap=kill -Wl,--wrap=wait -Wl,--wrap=isatty -Wl,--wrap=times -Wl,--wrap=sbrk -Wl,--wrap=_exit -Wl,-Map=output.map -Wl,--defsym=__comrv_cache_size=0
 compiler.S.flags=-c -march={build.mcu} -mabi=ilp32 {compiler.preproc.flags} -g
-
 
 compiler.ar.flags=rcs
 compiler.objcopy.eep.flags=-O srec
@@ -71,7 +56,6 @@ recipe.cpp.o.pattern="{compiler.path}{compiler.cpp.cmd}" {compiler.cpp.flags} -D
 recipe.ar.pattern="{compiler.path}{compiler.ar.cmd}" {compiler.ar.flags} {compiler.ar.extra_flags} "{archive_file_path}" "{object_file}"
 
 ## Link gc-sections, archives, and objects
-#recipe.c.combine.pattern="{compiler.path}{compiler.cpp.cmd}" {compiler.ld.flags} {build.extra_flags} {object_files} -nostdlib -Wl,--start-group "{archive_file_path}" -lm -lstdc++ -lc -lgloss -Wl,--end-group -lgcc -o "{build.path}/{build.project_name}.elf"
 recipe.c.combine.pattern="{compiler.path}{compiler.cpp.cmd}" {compiler.ld.flags} {build.extra_flags} {object_files} -Wl,--start-group "{archive_file_path}" -lm -lc -lgloss -Wl,--end-group -lgcc -o "{build.path}/{build.project_name}.elf"
 
 ## Create binary
@@ -84,22 +68,13 @@ recipe.objcopy.hex.pattern="{compiler.path}{compiler.elf2hex.cmd}" {compiler.elf
 recipe.size.pattern="{compiler.path}{compiler.size.cmd}" -B "{build.path}/{build.project_name}.elf"
 recipe.size.regex=\s*[0-9]+\s+[0-9]+\s+[0-9]+\s+([0-9]+).*
 
-
-
 # Uploader tools
 # -------------------
-#tools.openocd.path={runtime.tools.openocd.path}/bin/
-#tools.openocd.cmd=openocd
-#tools.openocd.program.params.verbose=-v
-#tools.openocd.program.params.quiet=-q
-#tools.openocd.program.config={runtime.platform.path}/freedom-e-sdk/bsp/env/{build.boardenv}/openocd.cfg
-#tools.openocd.program.pattern="{path}{cmd}" -f {program.config} -c "flash protect 0 64 last off; program {build.path}/{build.project_name}.elf verify; resume 0x20400000; exit"
-
-tools.openocd.path={runtime.platform.path}/freedom-e-sdk/bsp
-tools.openocd.program.config={path}/genysys_rv32_debug.cfg
-tools.openocd.program.configBIT={path}/genysys_rv32_program.cfg
-tools.openocd.program.bitfilePath={path}/soc_top_bscan.bit
-tools.openocd.cmd=/openocd_lsketch
+tools.openocd.path={runtime.platform.path}/strive-sdk/bsp
+tools.openocd.program.config={path}/env/strive-1/strive-1-fpga.cfg
+tools.openocd.program.configBIT={path}/env/strive-1/strive-1-fpga-bit.cfg
+tools.openocd.program.bitfilePath={path}/env/strive-1/strive-1.bit
+tools.openocd.cmd=/env/strive-1/openocd_lsketch
 tools.openocd.program.params.verbose=-v
 tools.openocd.program.params.quiet=-q
 tools.openocd.program.pattern="{path}{cmd}" "{build.path}/{build.project_name}.elf" {program.config} {program.configBIT} {program.bitfilePath}
@@ -111,10 +86,3 @@ tools.openocd.erase.pattern=
 tools.openocd.bootloader.params.verbose=-d2
 tools.openocd.bootloader.params.quiet=-d0
 tools.openocd.bootloader.pattern="{path}{cmd}" "/home/eco/Documents/OpenPLC_Editor/editor/arduino/examples/Baremetal/build/sifive.riscv.freedom_e310_arty_devkit/Baremetal.ino.elf" {program.config} {program.configBIT} {program.bitfilePath}
-
-#tools.manual_openocd.path=
-#tools.manual_openocd.cmd=openocd
-#tools.manual_openocd.program.params.verbose=-v
-#tools.manual_openocd.program.params.quiet=-q
-#tools.manual_openocd.program.config={runtime.platform.path}/freedom-e-sdk/bsp/env/{build.boardenv}/openocd.cfg
-#tools.manual_openocd.program.pattern="{path}{cmd}" -f {program.config} -c "flash protect 0 64 last off; program {build.path}/{build.project_name}.elf verify; resume 0x20400000; exit"

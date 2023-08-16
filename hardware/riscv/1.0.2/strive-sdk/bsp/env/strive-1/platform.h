@@ -1,36 +1,29 @@
 // See LICENSE for license details.
 
-#ifndef _SIFIVE_PLATFORM_H
-#define _SIFIVE_PLATFORM_H
+#ifndef _strive_PLATFORM_H
+#define _strive_PLATFORM_H
 
 // Some things missing from the official encoding.h
 #define MCAUSE_INT         0x80000000
 #define MCAUSE_CAUSE       0x7FFFFFFF
 
-#include "sifive/const.h"
-#include "sifive/devices/aon.h"
-#include "sifive/devices/clint.h"
-#include "sifive/devices/gpio.h"
-#include "sifive/devices/otp.h"
-#include "sifive/devices/plic.h"
-#include "sifive/devices/prci.h"
-#include "sifive/devices/pwm.h"
-#include "sifive/devices/spi.h"
-#include "sifive/devices/uart.h"
+#include "strive/const.h"
+#include "strive/devices/aon.h"
+#include "strive/devices/clint.h"
+#include "strive/devices/gpio.h"
+#include "strive/devices/plic.h"
+#include "strive/devices/pwm.h"
+#include "strive/devices/spi.h"
+#include "strive/devices/uart.h"
 
 /****************************************************************************
  * Platform definitions
  *****************************************************************************/
 
-// Memory map
-#define MASKROM_BASE_ADDR _AC(0x00001000,UL)
 #define TRAPVEC_TABLE_BASE_ADDR _AC(0x00001010,UL)
-#define OTP_MMAP_ADDR _AC(0x00020000,UL)
 #define CLINT_BASE_ADDR _AC(0x02000000,UL)
 #define PLIC_BASE_ADDR _AC(0x0C000000,UL)
 #define AON_BASE_ADDR _AC(0x10000000,UL)
-#define PRCI_BASE_ADDR _AC(0x10008000,UL)
-#define OTP_BASE_ADDR _AC(0x10010000,UL)
 #define GPIO_BASE_ADDR _AC(0x10012000,UL)
 #define UART0_BASE_ADDR _AC(0x80002000,UL)
 #define SPI0_BASE_ADDR _AC(0x10014000,UL)
@@ -43,7 +36,7 @@
 #define SPI0_MMAP_ADDR _AC(0x20000000,UL)
 #define MEM_BASE_ADDR _AC(0x80000000,UL)
 
-// IOF masks
+// IOF Mappings
 #define IOF0_SPI1_MASK          _AC(0x000007FC,UL)
 #define SPI11_NUM_SS     (4)
 #define IOF_SPI1_SS0          (2u)
@@ -69,8 +62,6 @@
 #define IOF_SPI2_DQ2          (30u)
 #define IOF_SPI2_DQ3          (31u)
 
-//#define IOF0_I2C_MASK          _AC(0x00003000,UL)
-
 #define IOF0_UART0_MASK         _AC(0x00030000, UL)
 #define IOF_UART0_RX   (16u)
 #define IOF_UART0_TX   (17u)
@@ -83,7 +74,7 @@
 #define IOF1_PWM1_MASK          _AC(0x00780000, UL)
 #define IOF1_PWM2_MASK          _AC(0x00003C00, UL)
 
-// Interrupt numbers
+// Interrupt Numbers
 #define INT_RESERVED 0
 #define INT_WDOGCMP 1
 #define INT_RTCCMP 2
@@ -119,15 +110,16 @@
 
 #include <stdint.h>
 
+
 #define NUM_GPIO 32
 
 #define PLIC_NUM_INTERRUPTS 52
 #define PLIC_NUM_PRIORITIES 7
 
+#define HAS_BOARD_BUTTONS
 #include "hifive1.h"
 
-unsigned long get_cpu_freq(void);
 unsigned long get_timer_freq(void);
 uint64_t get_timer_value(void);
 
-#endif /* _SIFIVE_PLATFORM_H */
+#endif /* _strive_PLATFORM_H */
