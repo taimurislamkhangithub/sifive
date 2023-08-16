@@ -1,6 +1,8 @@
 /*
  * Copyright (c) 2010 by Cristian Maglie <c.maglie@arduino.cc>
  * Copyright (c) 2014 by Paul Stoffregen <paul@pjrc.com> (Transaction API)
+ * Copyright (c) 2014 by Matthijs Kooijman <matthijs@stdin.nl> (SPISettings AVR)
+ * Copyright (c) 2014 by Andrew J. Kroll <xxxajk@gmail.com> (atomicity fixes)
  * SPI Master library for arduino.
  *
  * This file is free software; you can redistribute it and/or modify
@@ -12,141 +14,397 @@
 #ifndef _SPI_H_INCLUDED
 #define _SPI_H_INCLUDED
 
-#include "variant.h"
-#include <stdio.h>
+#include <Arduino.h>
+#define SPI_ACCEL0 0x80004400
 
-// SPI_HAS_TRANSACTION means SPI has
-//   - beginTransaction()
-//   - endTransaction()
-//   - usingInterrupt()
-//   - SPISetting(clock, bitOrder, dataMode)
+#define SPCR (*(volatile unsigned *)(SPI_ACCEL0 + (8*0x00)))
+#define SPSR (*(volatile unsigned *)(SPI_ACCEL0 + (8*0x01)))
+#define SPDR (*(volatile unsigned *)(SPI_ACCEL0 + (8*0x02)))
+#define SPER (*(volatile unsigned *)(SPI_ACCEL0 + (8*0x03)))
+#define SPCS (*(volatile unsigned *)(SPI_ACCEL0 + (8*0x04)))
+
+#define RFEM (1 << 0)
+#define SPR (1 << 0)
+#define CPHA (1 << 2)
+#define CPOL (1 << 3)
+#define MSTR (1 << 4)
+#define SPE (1 << 6)
+#define SPIE (1 << 7)
+// SPI_HAS_TRANSACTION means SPI has beginTransaction(), endTransaction(),
+// usingInterrupt(), and SPISetting(clock, bitOrder, dataMode)
 #define SPI_HAS_TRANSACTION 1
 
-// SPI_HAS_EXTENDED_CS_PIN_HANDLING means SPI has automatic 
-// CS pin handling and provides the following methods:
-//   - begin(pin)
-//   - end(pin)
-//   - setBitOrder(pin, bitorder)
-//   - setDataMode(pin, datamode)
-//   - setClockDivider(pin, clockdiv)
-//   - transfer(pin, data, SPI_LAST/SPI_CONTINUE)
-//   - beginTransaction(pin, SPISettings settings)
-//     (if transactions are available)
-#define SPI_HAS_EXTENDED_CS_PIN_HANDLING 1
+// SPI_HAS_NOTUSINGINTERRUPT means that SPI has notUsingInterrupt() method
+#define SPI_HAS_NOTUSINGINTERRUPT 1
+
+// SPI_ATOMIC_VERSION means that SPI has atomicity fixes and what version.
+// This way when there is a bug fix you can check this define to alert users
+// of your code if it uses better version of this library.
+// This also implies everything that SPI_HAS_TRANSACTION as documented above is
+// available too.
+#define SPI_ATOMIC_VERSION 1
+
+// Uncomment this line to add detection of mismatched begin/end transactions.
+// A mismatch occurs if other libraries fail to use SPI.endTransaction() for
+// each SPI.beginTransaction().  Connect an LED to this pin.  The LED will turn
+// on if any mismatch is ever detected.
+//#define SPI_TRANSACTION_MISMATCH_LED 5
+
+#ifndef LSBFIRST
+#define LSBFIRST 0
+#endif
+#ifndef MSBFIRST
+#define MSBFIRST 1
+#endif
+
+#define SPI_CLOCK_DIV4 0x00
+#define SPI_CLOCK_DIV16 0x01
+#define SPI_CLOCK_DIV64 0x02
+#define SPI_CLOCK_DIV128 0x03
+#define SPI_CLOCK_DIV2 0x04
+#define SPI_CLOCK_DIV8 0x05
+#define SPI_CLOCK_DIV32 0x06
 
 #define SPI_MODE0 0x00
-#define SPI_MODE1 0x01
-#define SPI_MODE2 0x02
-#define SPI_MODE3 0x03
+#define SPI_MODE1 0x04
+#define SPI_MODE2 0x08
+#define SPI_MODE3 0x0C
 
-enum SPITransferMode {
-	SPI_CONTINUE,
-	SPI_LAST
-};
+#define SPI_MODE_MASK 0x0C  // CPOL = bit 3, CPHA = bit 2 on SPCR
+#define SPI_CLOCK_MASK 0x03  // SPR1 = bit 1, SPR0 = bit 0 on SPCR
+#define SPI_2XCLOCK_MASK 0x01  // SPI2X = bit 0 on SPSR
+
+
 
 class SPISettings {
 public:
-	SPISettings(uint32_t clock, BitOrder bitOrder, uint8_t dataMode) {
-		if (__builtin_constant_p(clock)) {
-			init_AlwaysInline(clock, bitOrder, dataMode);
-		} else {
-			init_MightInline(clock, bitOrder, dataMode);
-		}
-	}
-	SPISettings() { init_AlwaysInline(4000000, MSBFIRST, SPI_MODE0); }
+  SPISettings(uint32_t clock, uint8_t bitOrder, uint8_t dataMode) {
+    if (__builtin_constant_p(clock)) {
+      init_AlwaysInline(clock, bitOrder, dataMode);
+    } else {
+      init_MightInline(clock, bitOrder, dataMode);
+    }
+  }
+  SPISettings() {
+    init_AlwaysInline(4000000, MSBFIRST, SPI_MODE0);
+  }
 private:
-	void init_MightInline(uint32_t clock, BitOrder bitOrder, uint8_t dataMode) {
-		init_AlwaysInline(clock, bitOrder, dataMode);
-	}
-	void init_AlwaysInline(uint32_t clock, BitOrder bitOrder, uint8_t dataMode) __attribute__((__always_inline__)) {
-		if (clock < (F_CPU/512)) {
-			sckdiv = 255;
-		} else if (clock >= (F_CPU / 2)) {
-			sckdiv = 0;
-		} else {
-			sckdiv = (F_CPU / (2*clock)) - 1;
-		}
-                sckmode = dataMode;
-                csid = 0;
-                csdef = 0xFFFF;
-                csmode = SPI_CSMODE_AUTO;
-                border = bitOrder;
-	}
-        uint8_t   sckmode; // mode bits to set polarity and phase of spi clock
-        uint8_t   sckdiv;  // spi clock frequency = F_CPU/2*(sckdiv-1), maximum is half of F_CPU 
-        uint8_t   csid;    // csid = index of chip select aka slave select pin, valid values are 0,1,2,3
-        uint16_t  csdef;   // inactive state of chip select pins (high or low)
-        uint8_t   csmode;  // chip select mode (0 = auto, 1 = CS toggles with frame)
-        BitOrder  border;  // bit ordering : 0 = LSB first, 1 = MSB first (common case)
+  void init_MightInline(uint32_t clock, uint8_t bitOrder, uint8_t dataMode) {
+    init_AlwaysInline(clock, bitOrder, dataMode);
+  }
+  void init_AlwaysInline(uint32_t clock, uint8_t bitOrder, uint8_t dataMode)
+    __attribute__((__always_inline__)) {
+    // Clock settings are defined as follows. Note that this shows SPI2X
+    // inverted, so the bits form increasing numbers. Also note that
+    // fosc/64 appears twice
+    // SPR1 SPR0 ~SPI2X Freq
+    //   0    0     0   fosc/2
+    //   0    0     1   fosc/4
+    //   0    1     0   fosc/8
+    //   0    1     1   fosc/16
+    //   1    0     0   fosc/32
+    //   1    0     1   fosc/64
+    //   1    1     0   fosc/64
+    //   1    1     1   fosc/128
 
-        // to read/write data over SPI interface, use next two FIFO ports 
-        //   txdata = when read, bit 31 signals full.  write data to xmit
-        //   rxdata = bit 31 signals empty, otherwise data in bits [7:0] is valid
+    // We find the fastest clock that is less than or equal to the
+    // given clock rate. The clock divider that results in clock_setting
+    // is 2 ^^ (clock_div + 1). If nothing is slow enough, we'll use the
+    // slowest (128 == 2 ^^ 7, so clock_div = 6).
+    // uint8_t clockDiv;
 
-        // currently unused SPI control registers:
-        //   interrupt related : txmark, rxmark, ie, ip, plus non PIO mode stuff
-        //   delay0,1 : behavior of cs @ frame start, end, between frames
+    // // When the clock is known at compile time, use this if-then-else
+    // // cascade, which the compiler knows how to completely optimize
+    // // away. When clock is not known, use a loop instead, which generates
+    // // shorter code.
+    // if (__builtin_constant_p(clock)) {
+    //   if (clock >= F_CPU / 2) {
+    //     clockDiv = 0;
+    //   } else if (clock >= F_CPU / 4) {
+    //     clockDiv = 1;
+    //   } else if (clock >= F_CPU / 8) {
+    //     clockDiv = 2;
+    //   } else if (clock >= F_CPU / 16) {
+    //     clockDiv = 3;
+    //   } else if (clock >= F_CPU / 32) {
+    //     clockDiv = 4;
+    //   } else if (clock >= F_CPU / 64) {
+    //     clockDiv = 5;
+    //   } else {
+    //     clockDiv = 6;
+    //   }
+    // } else {
+    //   uint32_t clockSetting = F_CPU / 2;
+    //   clockDiv = 0;
+    //   while (clockDiv < 6 && clock < clockSetting) {
+    //     clockSetting /= 2;
+    //     clockDiv++;
+    //   }
+    // }
 
-	friend class SPIClass;
+    // // Compensate for the duplicate fosc/64
+    // if (clockDiv == 6)
+    // clockDiv = 7;
+
+    // // Invert the SPI2X bit
+    // clockDiv ^= 0x1;
+
+    // // Pack into the SPISettings class
+    // spcr = _BV(SPE) | _BV(MSTR) | ((bitOrder == LSBFIRST) ? _BV(DORD) : 0) |
+    //   (dataMode & SPI_MODE_MASK) | ((clockDiv >> 1) & SPI_CLOCK_MASK);
+    // spsr = clockDiv & SPI_2XCLOCK_MASK;
+  }
+  uint8_t spcr;
+  uint8_t spsr;
+  friend class SPIClass;
 };
-
 
 
 class SPIClass {
-  public:
-	SPIClass(uint32_t _id);
+public:
+  // Initialize the SPI library
+  static void begin();
+  static void cs();
 
-	// Transfer functions where the hardware controls the SS line
-	byte transfer(byte _pin, uint8_t _data, SPITransferMode _mode = SPI_LAST);
-	uint16_t transfer16(byte _pin, uint16_t _data, SPITransferMode _mode = SPI_LAST);
-	void transfer(byte _pin, void *_buf, size_t _count, SPITransferMode _mode = SPI_LAST);
+  // If SPI is used from within an interrupt, this function registers
+  // that interrupt with the SPI library, so beginTransaction() can
+  // prevent conflicts.  The input interruptNumber is the number used
+  // with attachInterrupt.  If SPI is used from a different interrupt
+  // (eg, a timer), interruptNumber should be 255.
+  static void usingInterrupt(uint8_t interruptNumber);
+  // And this does the opposite.
+  static void notUsingInterrupt(uint8_t interruptNumber);
+  // Note: the usingInterrupt and notUsingInterrupt functions should
+  // not to be called from ISR context or inside a transaction.
+  // For details see:
+  // https://github.com/arduino/Arduino/pull/2381
+  // https://github.com/arduino/Arduino/pull/2449
 
-	// Transfer functions where the user controls the SS line
-	byte transfer(uint8_t _data, SPITransferMode _mode = SPI_LAST);
-	void transfer(void *_buf, size_t _count, SPITransferMode _mode = SPI_LAST);
+  // Before using SPI.transfer() or asserting chip select pins,
+  // this function is used to gain exclusive access to the SPI bus
+  // and configure the correct settings.
+  inline static void beginTransaction(SPISettings settings) {
+		SPCS = 0xFF;
+    // if (interruptMode > 0) {
+    //   uint8_t sreg = SREG;
+    //   noInterrupts();
 
-	// Transaction Functions
-	void usingInterrupt(uint8_t interruptNumber);
-	void beginTransaction(SPISettings settings);
-	void beginTransaction(uint8_t pin, SPISettings settings);
-	void endTransaction(void);
+    //   #ifdef SPI_AVR_EIMSK
+    //   if (interruptMode == 1) {
+    //     interruptSave = SPI_AVR_EIMSK;
+    //     SPI_AVR_EIMSK &= ~interruptMask;
+    //     SREG = sreg;
+    //   } else
+    //   #endif
+    //   {
+    //     interruptSave = sreg;
+    //   }
+    // }
 
-	// SPI Configuration methods
-	void attachInterrupt(void);
-	void detachInterrupt(void);
+    // #ifdef SPI_TRANSACTION_MISMATCH_LED
+    // if (inTransactionFlag) {
+    //   pinMode(SPI_TRANSACTION_MISMATCH_LED, OUTPUT);
+    //   digitalWrite(SPI_TRANSACTION_MISMATCH_LED, HIGH);
+    // }
+    // inTransactionFlag = 1;
+    // #endif
 
-	void begin(void);
-	void end(void);
+    // SPCR = settings.spcr;
+    // SPSR = settings.spsr;
+  }
 
-	// Attach/Detach pin to/from SPI controller
-	void begin(uint8_t _pin);
-	void end(uint8_t _pin);
+  inline static void cs(uint8_t enable)
+	{
+		if (enable)
+		{
+			SPCS = 0xff;
+		}
+		else
+		{
+			SPCS = 0x00;
+		}
+		//asm volatile("nop");
+	}
+  // Write to the SPI bus (MOSI pin) and also receive (MISO pin)
+  inline static uint8_t transfer(uint8_t data) {
 
-	// These methods sets a parameter on a single pin
-	void setBitOrder(uint8_t _pin, BitOrder);
-	void setDataMode(uint8_t _pin, uint8_t);
-	void setClockDivider(uint8_t _pin, uint8_t);
+	SPDR = data;
+    asm volatile("nop");
+    // Check For Recieve FIFO Empty Flag
+    while((SPSR & RFEM));
+    return SPDR;
+    // SPDR = data;
+    // /*
+    //  * The following NOP introduces a small delay that can prevent the wait
+    //  * loop form iterating when running at the maximum speed. This gives
+    //  * about 10% more speed, even if it seems counter-intuitive. At lower
+    //  * speeds it is unnoticed.
+    //  */
+    // asm volatile("nop");
+    // while (!(SPSR & _BV(SPIF))) ; // wait
+    // return SPDR;
+  }
+  inline static uint16_t transfer16(uint16_t data) {
 
-	// These methods sets the same parameters, but globally.
-	void setBitOrder(BitOrder _order);
-	void setDataMode(uint8_t _mode);
-	void setClockDivider(uint8_t _div);
+	SPDR = data;
+    asm volatile("nop");
+    // Check For Recieve FIFO Empty Flag
+    while((SPSR & RFEM));
+    return SPDR;
+    // union { uint16_t val; struct { uint8_t lsb; uint8_t msb; }; } in, out;
+    // in.val = data;
+    // if (!(SPCR & _BV(DORD))) {
+    //   SPDR = in.msb;
+    //   asm volatile("nop"); // See transfer(uint8_t) function
+    //   while (!(SPSR & _BV(SPIF))) ;
+    //   out.msb = SPDR;
+    //   SPDR = in.lsb;
+    //   asm volatile("nop");
+    //   while (!(SPSR & _BV(SPIF))) ;
+    //   out.lsb = SPDR;
+    // } else {
+    //   SPDR = in.lsb;
+    //   asm volatile("nop");
+    //   while (!(SPSR & _BV(SPIF))) ;
+    //   out.lsb = SPDR;
+    //   SPDR = in.msb;
+    //   asm volatile("nop");
+    //   while (!(SPSR & _BV(SPIF))) ;
+    //   out.msb = SPDR;
+    // }
+    // return out.val;
+  }
+  inline static void transfer(void *buf, size_t count) {
+    // if (count == 0) return;
+    // uint8_t *p = (uint8_t *)buf;
+    // SPDR = *p;
+    // while (--count > 0) {
+    //   uint8_t out = *(p + 1);
+    //   while (!(SPSR & _BV(SPIF))) ;
+    //   uint8_t in = SPDR;
+    //   SPDR = out;
+    //   *p++ = in;
+    // }
+    // while (!(SPSR & _BV(SPIF))) ;
+    // *p = SPDR;
+  }
+  // After performing a group of transfers and releasing the chip select
+  // signal, this function allows others to access the SPI bus
+  inline static void endTransaction(void) {
+		SPCS = 0x00;
+    // #ifdef SPI_TRANSACTION_MISMATCH_LED
+    // if (!inTransactionFlag) {
+    //   pinMode(SPI_TRANSACTION_MISMATCH_LED, OUTPUT);
+    //   digitalWrite(SPI_TRANSACTION_MISMATCH_LED, HIGH);
+    // }
+    // inTransactionFlag = 0;
+    // #endif
 
-  private:
-	uint32_t id;
-	// These are for specific pins.
-	BitOrder bitOrder[4+1];
-	uint32_t divider[4+1];
-	uint32_t mode[4+1];
-	
-	uint8_t interruptMode;    // 0=none, 1-15=mask, 16=global
-	uint8_t interruptSave;    // temp storage, to restore state
-	uint32_t interruptMask[4];
+    // if (interruptMode > 0) {
+    //   #ifdef SPI_AVR_EIMSK
+    //   uint8_t sreg = SREG;
+    //   #endif
+    //   noInterrupts();
+    //   #ifdef SPI_AVR_EIMSK
+    //   if (interruptMode == 1) {
+    //     SPI_AVR_EIMSK = interruptSave;
+    //     SREG = sreg;
+    //   } else
+    //   #endif
+    //   {
+    //     SREG = interruptSave;
+    //   }
+    // }
+  }
+
+  // Disable the SPI bus
+  static void end();
+
+  // This function is deprecated.  New applications should use
+  // beginTransaction() to configure SPI settings.
+  inline static void setBitOrder(uint8_t bitOrder) {
+    // if (bitOrder == LSBFIRST) SPCR |= _BV(DORD);
+    // else SPCR &= ~(_BV(DORD));
+  }
+  // This function is deprecated.  New applications should use
+  // beginTransaction() to configure SPI settings.
+  inline static void setDataMode(uint8_t dataMode) {
+	Serial.print("DATAMODE");
+	 switch (dataMode)
+    {
+    case 0:
+        SPCR |= SPR;
+        SPCR = ~CPHA;
+        SPCR = ~CPOL;
+        SPCR |= MSTR;
+        SPCR |= SPE;
+        SPCR = ~SPIE;
+		break;
+    case 1:
+	    SPCR |= SPR;
+        SPCR = ~CPHA;
+        SPCR |= CPOL;
+        SPCR |= MSTR;
+        SPCR |= SPE;
+        SPCR = ~SPIE;
+        break;
+    case 2:
+		SPCR |= SPR;
+        SPCR |= CPHA;
+        SPCR = ~CPOL;
+        SPCR |= MSTR;
+        SPCR |= SPE;
+        SPCR = ~SPIE;
+        break;
+    case 3:
+		SPCR |= SPR;
+        SPCR |= CPHA;
+        SPCR |= CPOL;
+        SPCR |= MSTR;
+        SPCR |= SPE;
+        SPCR = ~SPIE;
+        break;
+    default:
+		SPCR |= SPR;
+        SPCR = ~CPHA;
+        SPCR = ~CPOL;
+        SPCR |= MSTR;
+        SPCR |= SPE;
+        SPCR = ~SPIE;
+        break;
+    }
+    // // Set SPI event register with desired configuration (interrupt count 00 (7:6), clock divisor 10 (1:0) for 4096)
+    
+	Serial.print("my register");
+	Serial.print(SPCR);
+	SPER = 0x01;
+	Serial.print(SPER);
+
+
+    // SPCR = (SPCR & ~SPI_MODE_MASK) | dataMode;
+  }
+  // This function is deprecated.  New applications should use
+  // beginTransaction() to configure SPI settings.
+  inline static void setClockDivider(uint8_t clockDiv) {
+    // SPCR = (SPCR & ~SPI_CLOCK_MASK) | (clockDiv & SPI_CLOCK_MASK);
+    // SPSR = (SPSR & ~SPI_2XCLOCK_MASK) | ((clockDiv >> 2) & SPI_2XCLOCK_MASK);
+  }
+  // These undocumented functions should not be used.  SPI.transfer()
+  // polls the hardware flag which is automatically cleared as the
+  // AVR responds to SPI's interrupt
+  inline static void attachInterrupt() { }
+  inline static void detachInterrupt() { }
+
+private:
+  static uint8_t initialized;
+  static uint8_t interruptMode; // 0=none, 1=mask, 2=global
+  static uint8_t interruptMask; // which interrupts to mask
+  static uint8_t interruptSave; // temp storage, to restore state
+  #ifdef SPI_TRANSACTION_MISMATCH_LED
+  static uint8_t inTransactionFlag;
+  #endif
 };
 
-#if SPI_INTERFACES_COUNT > 0
 extern SPIClass SPI;
+
 #endif
-
-#endif // _SPI_H_INCLUDED
-
