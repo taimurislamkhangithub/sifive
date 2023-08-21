@@ -15,6 +15,7 @@
 #include "strive/devices/pwm.h"
 #include "strive/devices/spi.h"
 #include "strive/devices/uart.h"
+#include "strive/devices/remap.h"
 
 /****************************************************************************
  * Platform definitions
