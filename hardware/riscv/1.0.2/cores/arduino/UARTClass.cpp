@@ -20,16 +20,29 @@
 #include <stdio.h>
 #include <string.h>
 #include "UARTClass.h"
-
 #include "variant.h"
 
-UARTClass Serial;
 
+UARTClass Serial;
+UARTClass Serial1;
+
+
+void UARTClass::init(uint32_t base)
+{
+  UBRD = (uint32_t *)(base + UART_REG_BRDL);
+  UIER = (uint32_t *)(base + UART_REG_IER);
+  UIIR = (uint32_t *)(base + UART_REG_IIR);
+  UFCR = (uint32_t *)(base + UART_REG_FCR);
+  ULCR = (uint32_t *)(base + UART_REG_LCR);
+  ULSR = (uint32_t *)(base + UART_REG_LSR);
+  UWRC = (uint32_t *)(base + UART_WR_CH);
+}
 
 int UARTClass::sio_probe_rx()
 {
+  
     /* Check for characters in UART Receive FIFO */
-    if ((UART_LSR_DR & (UART_REG(UART_REG_LSR))) == 0)
+    if ((UART_LSR_DR & (*ULSR)) == 0)
     {
         return (0);
     }
@@ -42,7 +55,7 @@ int UARTClass::sio_getchar(int blocking)
   int c, busy;
 
   while (blocking && !sio_probe_rx());
-  c = UART_REG(UART_WR_CH);
+  c = *UWRC;
   return c;
 }
 
@@ -51,10 +64,10 @@ int UARTClass::sio_putchar(char c, int blocking)
 
   if (blocking){
   /* Check for space in UART FIFO */
-    while((UART_REG(UART_REG_LSR) & UART_LSR_THRE_BIT) == 0);
+    while((*ULSR & UART_LSR_THRE_BIT) == 0);
   }
   // write char
-  UART_REG(UART_WR_CH) = c;
+  *UWRC = c;
   return 0;
 }
 
@@ -63,7 +76,7 @@ int UARTClass::sio_putchar(char c, int blocking)
  */
 void UARTClass::sio_setbaud(int bauds)
 {
-  UART_REG(UART_REG_BRDL) = (F_CPU / bauds) / 16;
+  *UBRD = (F_CPU / bauds) / 16;
 }
 
 // Public Methods //////////////////////////////////////////////////////////////
@@ -72,16 +85,16 @@ void UARTClass::begin(unsigned long bauds)
 {
 
   /* SET LSR to be 1's so Whisper will be happy that ch is ready */
-  UART_REG(UART_REG_LSR) = 0xff;
+  *ULSR = 0xff;
   /* Set DLAB bit in LCR */
-  UART_REG(UART_REG_LCR) |= UART_DLAB_BIT;
+  *ULCR |= UART_DLAB_BIT;
   /* Set divisor regs  devisor = 27: clock_freq/baud_rate*16 -->> clock = 50MHz, baud=115200*/
-  UART_REG(UART_REG_BRDL) = (F_CPU / bauds) / 16;
+  *UBRD = (F_CPU / bauds) / 16;
   /* 8 data bits, 1 stop bit, no parity, clear DLAB */
-  UART_REG(UART_REG_LCR) = (UART_LCR_CS8 | UART_LCR_1_STB | UART_LCR_PDIS);
-  UART_REG(UART_REG_FCR) = (UART_FCR_FIFO_BIT | UART_FCR_MODE0_BIT | UART_FCR_FIFO_8_BIT | UART_FCR_RCVRCLR_BIT | UART_FCR_XMITCLR_BIT);
+  *ULCR = (UART_LCR_CS8 | UART_LCR_1_STB | UART_LCR_PDIS);
+  *UFCR = (UART_FCR_FIFO_BIT | UART_FCR_MODE0_BIT | UART_FCR_FIFO_8_BIT | UART_FCR_RCVRCLR_BIT | UART_FCR_XMITCLR_BIT);
   /* disable interrupts  */
-  UART_REG(UART_REG_IER) = (0x00);
+  *UIER = (0x00);
 
 }
 
@@ -120,7 +133,7 @@ int UARTClass::available(void)
 int UARTClass::availableForWrite(void)
 {
   int busy;
-  busy = (!(UART_REG(UART_REG_LSR) & UART_LSR_THRE_BIT));
+  busy = (!(*ULSR & UART_LSR_THRE_BIT));
   return (!busy);
 }
 
@@ -156,7 +169,7 @@ int UARTClass::read(void)
 void UARTClass::flush(void)
 {
   /* Check for space in UART FIFO */
-    while((UART_REG(UART_REG_LSR) & UART_LSR_THRE_BIT) == 0);
+    while((*ULSR & UART_LSR_THRE_BIT) == 0);
 }
 
 size_t

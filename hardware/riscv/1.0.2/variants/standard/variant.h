@@ -28,6 +28,7 @@
 
 #ifdef __cplusplus
 extern UARTClass Serial;
+extern UARTClass Serial1;
 #endif
 
 /*
