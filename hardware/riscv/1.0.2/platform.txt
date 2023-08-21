@@ -16,8 +16,8 @@ compiler.size.cmd=riscv64-unknown-elf-size
 
 compiler.sdk.path={runtime.platform.path}/strive-sdk/bsp
 compiler.preproc.flags=-I{build.system.path}/include -I{compiler.sdk.path}/include -I{compiler.sdk.path}/env -I{compiler.sdk.path}/drivers -I{compiler.sdk.path}/env/{build.boardenv}
-compiler.c.flags=-c -Os -Wall -ffunction-sections -fdata-sections -march={build.mcu} -mabi=ilp32 -march=rv32im {compiler.preproc.flags} -fno-builtin-printf -include sys/cdefs.h -g
-compiler.cpp.flags=-c -Os -Wall -ffunction-sections -fdata-sections -march={build.mcu} -mabi=ilp32 -march=rv32im {compiler.preproc.flags} -fno-builtin-printf -include sys/cdefs.h -g
+compiler.c.flags=-c -Os -Wall -ffunction-sections -fdata-sections -march={build.mcu} -mabi=ilp32 {compiler.preproc.flags} -fno-builtin-printf -include sys/cdefs.h -g
+compiler.cpp.flags=-c -Os -Wall -ffunction-sections -fdata-sections -march={build.mcu} -mabi=ilp32  {compiler.preproc.flags} -fno-builtin-printf -include sys/cdefs.h -g
 compiler.ld.flags=-T {build.ldscript} -Os -march={build.mcu} -mabi=ilp32 -mcmodel=medlow -Wl,-gc-sections -nostdlib -nostartfiles -static -Wl,--wrap=malloc -Wl,--wrap=free -Wl,--wrap=open -Wl,--wrap=lseek -Wl,--wrap=read -Wl,--wrap=write -Wl,--wrap=fstat -Wl,--wrap=stat -Wl,--wrap=close -Wl,--wrap=link  -Wl,--wrap=unlink -Wl,--wrap=execve" -Wl,--wrap=fork" -Wl,--wrap=getpid -Wl,--wrap=kill -Wl,--wrap=wait -Wl,--wrap=isatty -Wl,--wrap=times -Wl,--wrap=sbrk -Wl,--wrap=_exit -Wl,-Map=output.map -Wl,--defsym=__comrv_cache_size=0
 compiler.S.flags=-c -march={build.mcu} -mabi=ilp32 {compiler.preproc.flags} -g
 
