@@ -36,16 +36,24 @@ class UARTClass : public HardwareSerial
     void flush(void);
     void sio_receive(char c);
     size_t write(uint8_t c);
+    void init(uint32_t base);
+
     using Print::write; // pull in write(str) and write(buf, size) from Print
 
     operator bool() {return (true);}; // UART always active
 
-    // f32c extension (default is XON/XOFF enabled - so input is not transparent)
-//    void setXoffXon(bool enable) { if (enable) tx_xoff &= ~0x80; else tx_xoff = 0x80; }
-
   private:
     static const int RX_BUF_SIZE = 8; // Size of the receive buffer
+    volatile uint32_t *UBRD;
+    volatile uint32_t *UIER;
+    volatile uint32_t *UIIR;
+    volatile uint32_t *UFCR;
+    volatile uint32_t *ULCR;
+    volatile uint32_t *ULSR;
+    volatile uint32_t *UWRC;
+
   protected:
+    volatile uint8_t *serbase;  // base address of SIO register for port
     int sio_probe_rx();
     int sio_getchar(int blocking);
     int sio_putchar(char c, int blocking);
@@ -56,7 +64,7 @@ class UARTClass : public HardwareSerial
       SIO_RXBUFMASK = (SIO_RXBUFSIZE - 1)
     };
 
-    volatile uint8_t *serbase;  // base address of SIO register for port
+
 //    volatile uint8_t  tx_xoff;  // bit 7 set = disable Xoff/Xon flow control
     volatile uint8_t  sio_rxbuf_head;
     volatile uint8_t  sio_rxbuf_tail;
