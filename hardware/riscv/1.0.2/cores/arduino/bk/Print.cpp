@@ -41,33 +41,35 @@ size_t Print::write(const uint8_t *buffer, size_t size)
 
 size_t Print::write(const uint8_t data)
 {
-  /* Check for space in UART FIFO */
-    while((UART_REG(UART_REG_LSR) & UART_LSR_THRE_BIT) == 0);
 
-  // write char
-  UART_REG(UART_WR_CH) = data;
+  //writer(data);
+  // /* Check for space in UART FIFO */
+  //   while((UART_REG(UART_REG_LSR) & UART_LSR_THRE_BIT) == 0);
+
+  // // write char
+  // UART_REG(UART_WR_CH) = 'P';
   return 1;
 }
 
-size_t Print::write(const uint8_t *data)
-{
-  /* Check for space in UART FIFO */
-    while((UART_REG(UART_REG_LSR) & UART_LSR_THRE_BIT) == 0);
+// size_t Print::write(const uint8_t *data)
+// {
+//   /* Check for space in UART FIFO */
+//     while((UART_REG(UART_REG_LSR) & UART_LSR_THRE_BIT) == 0);
 
-  // write char
-  UART_REG(UART_WR_CH) = *data;
-  return 1;
-}
+//   // write char
+//   UART_REG(UART_WR_CH) = *data;
+//   return 1;
+// }
 
-size_t Print::write(const char data)
-{
-  /* Check for space in UART FIFO */
-    while((UART_REG(UART_REG_LSR) & UART_LSR_THRE_BIT) == 0);
+// size_t Print::write(const char data)
+// {
+//   /* Check for space in UART FIFO */
+//     while((UART_REG(UART_REG_LSR) & UART_LSR_THRE_BIT) == 0);
 
-  // write char
-  UART_REG(UART_WR_CH) = data;
-  return 1;
-}
+//   // write char
+//   UART_REG(UART_WR_CH) = data;
+//   return 1;
+// }
 
 
 size_t Print::print(const __FlashStringHelper *ifsh)
@@ -87,7 +89,7 @@ size_t Print::print(const char str[])
 
 size_t Print::print(char c)
 {
-  return write(c);
+  return write((uint8_t)c);
 }
 
 size_t Print::print(unsigned char b, int base)

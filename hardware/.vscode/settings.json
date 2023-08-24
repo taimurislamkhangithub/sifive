@@ -1,5 +1,10 @@
 {
     "files.associations": {
-        "*.tcc": "cpp"
+        "*.tcc": "cpp",
+        "limits": "cpp",
+        "wiring_analog.h": "c",
+        "platform.h": "c",
+        "arduino.h": "c",
+        "hifive1.h": "c"
     }
 }

@@ -23,7 +23,7 @@
 #define Stream_h
 
 #include <inttypes.h>
-#include "Print.h"
+//#include "Print.h"
 
 // compatability macros for testing
 /*
@@ -35,7 +35,7 @@
 readBytesBetween( pre_string, terminator, buffer, length)
 */
 
-class Stream : public Print
+class Stream 
 {
   protected:
     unsigned long _timeout;      // number of milliseconds to wait for the next char before aborting timed read
@@ -49,7 +49,7 @@ class Stream : public Print
     virtual int read() = 0;
     virtual int peek() = 0;
     virtual void flush() = 0;
-    virtual size_t write(uint8_t) = 0;
+    //virtual size_t write(const uint8_t) = 0;
 
     Stream() {_timeout=1000;}
 
