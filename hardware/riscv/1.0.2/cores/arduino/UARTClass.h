@@ -19,6 +19,18 @@
 #ifndef _UART_CLASS_
 #define _UART_CLASS_
 
+#define DEC 10
+#define HEX 16
+#define OCT 8
+#define BIN 2
+
+__BEGIN_DECLS
+#include <inttypes.h>
+#include <stdio.h> // for size_t
+__END_DECLS
+
+#include "WString.h"
+#include "Printable.h"
 #include "platform.h"
 #include "HardwareSerial.h"
 
@@ -35,12 +47,50 @@ class UARTClass : public HardwareSerial
     int read(void);
     void flush(void);
     void sio_receive(char c);
-    size_t write(uint8_t c);
     void init(uint32_t base);
 
-    using Print::write; // pull in write(str) and write(buf, size) from Print
+    size_t write(uint8_t);
 
-    operator bool() {return (true);}; // UART always active
+    size_t write(const char *str) {
+      if (str == NULL) return 0;
+      return write((const uint8_t *)str, strlen(str));
+    }
+    size_t write(const uint8_t *buffer, size_t size);
+    size_t write(const char *buffer, size_t size) {
+      return write((const uint8_t *)buffer, size);
+    }
+    
+    size_t print(const __FlashStringHelper *);
+    size_t print(const String &);
+    size_t print(const char[]);
+    size_t print(char);
+    size_t print(unsigned char, int = DEC);
+    size_t print(int, int = DEC);
+    size_t print(unsigned int, int = DEC);
+    size_t print(long, int = DEC);
+    size_t print(unsigned long, int = DEC);
+    size_t print(double, int = 2);
+    size_t print(const Printable&);
+
+    size_t println(const __FlashStringHelper *);
+    size_t println(const String &s);
+    size_t println(const char[]);
+    size_t println(char);
+    size_t println(unsigned char, int = DEC);
+    size_t println(int, int = DEC);
+    size_t println(unsigned int, int = DEC);
+    size_t println(long, int = DEC);
+    size_t println(unsigned long, int = DEC);
+    size_t println(double, int = 2);
+    size_t println(const Printable&);
+    size_t println(void);
+    // using Print::write; // pull in write(str) and write(buf, size) from Print
+    // operator bool() {return (true);}; // UART always active
+   
+
+    //using Print::write; // pull in write(str) and write(buf, size) from Print
+
+    //soperator bool() {return (true);}; // UART always active
 
   private:
     static const int RX_BUF_SIZE = 8; // Size of the receive buffer
@@ -51,6 +101,9 @@ class UARTClass : public HardwareSerial
     volatile uint32_t *ULCR;
     volatile uint32_t *ULSR;
     volatile uint32_t *UWRC;
+    int write_error;
+    size_t printNumber(unsigned long, uint8_t);
+    size_t printFloat(double, uint8_t);
 
   protected:
     volatile uint8_t *serbase;  // base address of SIO register for port

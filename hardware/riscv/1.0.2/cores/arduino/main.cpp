@@ -31,8 +31,8 @@
 int main( void )
 {
   //init();
-  Serial.init(0x80002000);
-  Serial1.init(0x80003000);
+  Serial.init(UART0_BASE_ADDR);
+  Serial1.init(UART1_BASE_ADDR);
   // Compute F_CPU inverse, used for millis and micros functions.
   calc_inv(F_CPU/1000, &f_cpu_1000_inv);
   calc_inv(F_CPU/1000000, &f_cpu_1000000_inv);
