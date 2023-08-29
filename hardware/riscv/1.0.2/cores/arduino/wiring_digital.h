@@ -31,20 +31,9 @@ __BEGIN_DECLS
 #define portOutputRegister(port) ((PortRegister_t) (GPIO_BASE_ADDR + GPIO_OUTPUT_VAL))
 #define portInputRegister(port)  ((PortRegister_t) (GPIO_BASE_ADDR + GPIO_INPUT_VAL))
 
-
-#define REMAP    0x80004200
-#define DIR_REG 0x80004364
-#define PINSEL 0x80004340
-#define REMAP_OUT_REG (REMAP)
-#define REMAP_IN_REG (REMAP+0x24)
-
 #define READ_Reg(dir) (*(volatile unsigned *)dir)
 #define WRITE_Reg(dir,val) ((*(volatile unsigned *)dir) = (val))
 
-#define GPIO_BASE_ADDR1 0x80001400    ///GPIO read  input
-#define GPIO_INPUT (*((volatile unsigned *)(GPIO_BASE_ADDR1)))    //// GPIO write
-#define GPIO_OUTPUT (*((volatile unsigned *)(GPIO_BASE_ADDR1+0x04)))    //// GPIO write  read
-#define GPIO_DIR (*((volatile unsigned *)(GPIO_BASE_ADDR1+0x08)))    //// GPIO write  Dir  
 
 /**
  * \brief Configures the specified pin to behave either as an input or an output. See the description of digital pins for details.
@@ -90,7 +79,7 @@ extern int digitalRead( uint32_t ulPin ) ;
  * \param peripheral Which peripheral to assign to pin
  * \return HIGH or LOW
  */
-extern void Remap(char pin_number, unsigned int pin_dir, uint8_t peripheral);
+extern void Remap(uint8_t pin_number, uint32_t pin_dir, uint8_t peripheral);
 
 __END_DECLS
 
